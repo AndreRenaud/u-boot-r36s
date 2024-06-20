@@ -11,6 +11,25 @@ config TARGET_EVB_PX30
 config TARGET_ODROID_GO2
 	bool "ODROID_GO2"
 
+config TARGET_R36S
+	bool "R36S"
+
+if TARGET_R36S
+
+config SYS_BOARD
+	default "rk3326-r36s"
+
+config SYS_VENDOR
+	default "unknown"
+
+config SYS_CONFIG_NAME
+	default "rk3326-r36s"
+
+config BOARD_SPECIFIC_OPTIONS # dummy
+	def_bool y
+
+endif
+
 config TARGET_PX30_CORE
 	bool "Engicam PX30.Core"
 	help
