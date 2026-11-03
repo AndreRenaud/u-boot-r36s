@@ -770,6 +770,12 @@ static int dw_mipi_dsi_rockchip_set_bl(struct udevice *dev, int percent)
 	 * used to simply detect a panel rather than bring one up.
 	 */
 	ret = panel_enable_backlight(priv->panel);
+	/*
+	 * The panel finishes powering up in the background and enables the
+	 * host (video mode) itself, once it has sent its last command.
+	 */
+	if (ret == -EINPROGRESS)
+		return 0;
 	if ((ret) && (ret != -ENOSYS)) {
 		dev_err(dev, "panel %s enable backlight error %d\n",
 			priv->panel->name, ret);
