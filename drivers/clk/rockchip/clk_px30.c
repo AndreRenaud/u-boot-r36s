@@ -1416,6 +1416,13 @@ static int px30_clk_enable(struct clk *clk)
 	case PCLK_WDT_NS:
 		/* Required to successfully probe the Designware watchdog driver */
 		return 0;
+	case ACLK_VOPB:
+	case HCLK_VOPB:
+	case DCLK_VOPB:
+	case PCLK_MIPI_DSI:
+	case PCLK_MIPIDSIPHY:
+		/* Required to successfully probe the VOP and MIPI DSI drivers */
+		return 0;
 	}
 
 	debug("%s: unsupported clk %ld\n", __func__, clk->id);
@@ -1702,6 +1709,10 @@ static ulong px30_pmuclk_get_rate(struct clk *clk)
 		break;
 	case SCLK_UART0_PMU:
 		rate = px30_pmu_uart0_get_clk(priv);
+		break;
+	case SCLK_MIPIDSIPHY_REF:
+		/* A gate on the 24 MHz oscillator */
+		rate = OSC_HZ;
 		break;
 	default:
 		return -ENOENT;
