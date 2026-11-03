@@ -14,6 +14,7 @@
 #include <syscon.h>
 #include <asm/gpio.h>
 #include <asm/arch-rockchip/clock.h>
+#include <asm/arch-rockchip/io_domain.h>
 #include <asm/arch-rockchip/periph.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -55,6 +56,16 @@ static uint rockchip_dwmmc_get_mmc_clk(struct dwmci_host *host, uint freq)
 	}
 
 	return freq;
+}
+
+/* Switch the pads' I/O domain along with vqmmc, as Linux's io-domain driver does */
+static int rockchip_dwmmc_set_io_voltage(struct dwmci_host *host, int uV)
+{
+	int ret;
+
+	ret = rockchip_io_domain_set_voltage(host->mmc->vqmmc_supply, uV);
+
+	return ret == -ENOENT ? 0 : ret;
 }
 
 static int rockchip_dwmmc_of_to_plat(struct udevice *dev)
@@ -149,6 +160,17 @@ static int rockchip_dwmmc_probe(struct udevice *dev)
 	}
 #endif
 	dwmci_setup_cfg(&plat->cfg, host, priv->minmax[1], priv->minmax[0]);
+	if (CONFIG_IS_ENABLED(MMC_UHS_SUPPORT)) {
+		/*
+		 * UHS modes come from the DT. There's no tuning support, so drop
+		 * the modes that need it; DDR50 doesn't.
+		 */
+		ret = mmc_of_parse(dev, &plat->cfg);
+		if (ret)
+			return ret;
+		plat->cfg.host_caps &= ~(MMC_CAP(UHS_SDR50) | MMC_CAP(UHS_SDR104));
+		host->set_io_voltage = rockchip_dwmmc_set_io_voltage;
+	}
 	host->mmc = &plat->mmc;
 	host->mmc->priv = &priv->host;
 	host->mmc->dev = dev;
