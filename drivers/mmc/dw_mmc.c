@@ -17,6 +17,7 @@
 #include <asm/cache.h>
 #include <linux/delay.h>
 #include <power/regulator.h>
+#include <u-boot/schedule.h>
 
 #define PAGE_SIZE 4096
 
@@ -291,6 +292,9 @@ static int dwmci_data_transfer(struct dwmci_host *host, struct mmc_data *data)
 			ret = 0;
 			break;
 		}
+
+		/* Big reads take a while: let cyclic functions run meanwhile */
+		schedule();
 
 		/* Check for timeout */
 		if (get_timer(start) > timeout) {
