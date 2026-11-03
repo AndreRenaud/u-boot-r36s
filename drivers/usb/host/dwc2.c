@@ -232,6 +232,14 @@ static void dwc_otg_core_host_init(struct udevice *dev,
 
 	/* Turn on the vbus power. */
 	if (readl(&regs->global_regs.gintsts) & GINTSTS_CURMODE_HOST) {
+		/*
+		 * Force VBUS valid, as Linux does in host mode. Otherwise a PHY
+		 * that reports VBUS invalid (e.g. the Rockchip PX30 OTG port)
+		 * makes the core flag over-current and drop port power.
+		 */
+		setbits_le32(&regs->global_regs.gotgctl,
+			     GOTGCTL_VBVALOEN | GOTGCTL_VBVALOVAL);
+
 		hprt0 = readl(&regs->host_regs.hprt0) & ~HPRT0_W1C_MASK;
 		if (!(hprt0 & HPRT0_PWR)) {
 			hprt0 |= HPRT0_PWR;
