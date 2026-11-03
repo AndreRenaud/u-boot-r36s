@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+#include "rk3326-u-boot.dtsi"
+
+/ {
+	aliases {
+		/*
+		 * Linux calls the SD slot mmc0, but the existing environment
+		 * (bootcmd, ENV_FAT_DEVICE_AND_PART) expects mmc1.
+		 */
+		/delete-property/ mmc0;
+		mmc1 = &sdmmc;
+	};
+};
+
+&i2c0_xfer {
+	bootph-pre-ram;
+};
+
+&i2s1_2ch_mclk {
+	bootph-pre-ram;
+};
+
+&pcfg_pull_none_smt {
+	bootph-pre-ram;
+};
+
+&pmic_int {
+	bootph-pre-ram;
+};
+
+&rk817 {
+	regulators {
+		bootph-pre-ram;
+	};
+};
+
+/*
+ * The boost comes up at 4.7 V, below USB VBUS spec. Linux raises it to the
+ * regulator minimum (5.0 V); U-Boot only sets a voltage when told to.
+ */
+&usb_midu {
+	regulator-init-microvolt = <5000000>;
+};
+
+&u2phy {
+	/*
+	 * Linux reparents USB480M to the PHY's clock output. The PX30 clock
+	 * driver can't, and U-Boot doesn't need it for USB.
+	 */
+	/delete-property/ assigned-clocks;
+	/delete-property/ assigned-clock-parents;
+};
+
+/*
+ * The USB-C data port is used in host mode for a USB Ethernet adapter.
+ * Linux leaves otg-port disabled and runs dwc2 without a PHY driver;
+ * U-Boot's dwc2 host driver needs the PHY it points at.
+ */
+&u2phy_otg {
+	status = "okay";
+};
+
+&usb20_otg {
+	dr_mode = "host";
+};
+
+&uart2 {
+	bootph-all;
+	clock-frequency = <24000000>;
+};
+
+&uart2m1_xfer {
+	bootph-pre-sram;
+	bootph-pre-ram;
+};

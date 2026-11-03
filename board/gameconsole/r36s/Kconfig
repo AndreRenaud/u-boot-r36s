@@ -1,0 +1,15 @@
+if TARGET_R36S
+
+config SYS_BOARD
+	default "r36s"
+
+config SYS_VENDOR
+	default "gameconsole"
+
+config SYS_CONFIG_NAME
+	default "rk3326-r36s"
+
+config BOARD_SPECIFIC_OPTIONS # dummy
+	def_bool y
+
+endif
