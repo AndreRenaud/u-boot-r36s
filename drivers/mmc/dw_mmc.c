@@ -665,9 +665,17 @@ static int dwmci_set_ios(struct mmc *mmc)
 
 #if CONFIG_IS_ENABLED(DM_REGULATOR)
 	if (mmc->vqmmc_supply) {
+		bool v18 = mmc->signal_voltage == MMC_SIGNAL_VOLTAGE_180;
 		int ret;
 
-		if (mmc->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+		/* Pads leave 1.8 V mode before the supply rises */
+		if (!v18 && host->set_io_voltage) {
+			ret = host->set_io_voltage(host, 3300000);
+			if (ret)
+				return ret;
+		}
+
+		if (v18)
 			ret = regulator_set_value_clamp(mmc->vqmmc_supply,
 							1700000, 1800000, 1950000);
 		else
@@ -675,6 +683,13 @@ static int dwmci_set_ios(struct mmc *mmc)
 							2700000, 3300000, 3600000);
 		if (ret && ret != -ENOSYS)
 			return ret;
+
+		/* ... and enter it only once the supply has dropped */
+		if (v18 && host->set_io_voltage) {
+			ret = host->set_io_voltage(host, 1800000);
+			if (ret)
+				return ret;
+		}
 	}
 #endif
 

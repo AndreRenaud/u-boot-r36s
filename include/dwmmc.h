@@ -226,6 +226,17 @@ struct dwmci_host {
 	 * return that value too. Then DWMMC will put itself in bypass mode.
 	 */
 	unsigned int (*get_mmc_clk)(struct dwmci_host *host, uint freq);
+	/**
+	 * @set_io_voltage: (Optional) Platform function to follow a change of
+	 * the I/O (vqmmc) voltage, e.g. a pad voltage selection
+	 *
+	 * @host:	DWMMC host
+	 * @uV:		I/O voltage in microvolts
+	 *
+	 * Called before vqmmc is raised to 3.3 V and after it is lowered to
+	 * 1.8 V, so the pads are never in 1.8 V mode with 3.3 V on them.
+	 */
+	int (*set_io_voltage)(struct dwmci_host *host, int uV);
 
 #ifndef CONFIG_BLK
 	struct mmc_config cfg;
