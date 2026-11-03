@@ -7,8 +7,10 @@
 
 #include <dm.h>
 #include <dm/device_compat.h>
+#include <dm/uclass-internal.h>
 #include <regmap.h>
 #include <syscon.h>
+#include <asm/arch-rockchip/io_domain.h>
 #include <power/regulator.h>
 
 #define MAX_SUPPLIES		16
@@ -380,3 +382,39 @@ U_BOOT_DRIVER(rockchip_iodomain) = {
 	.bind = rockchip_iodomain_bind,
 	.probe = rockchip_iodomain_probe,
 };
+
+int rockchip_io_domain_set_voltage(struct udevice *supply, int uV)
+{
+	struct udevice *dev;
+	struct uclass *uc;
+	int ret = -ENOENT;
+
+	uclass_id_foreach_dev(UCLASS_NOP, dev, uc) {
+		const struct rockchip_iodomain_soc_data *soc_data;
+		struct regmap *grf;
+
+		if (dev->driver != DM_DRIVER_GET(rockchip_iodomain) ||
+		    !device_active(dev))
+			continue;
+
+		soc_data = (const void *)dev_get_driver_data(dev);
+		grf = syscon_get_regmap(dev_get_parent(dev));
+		if (IS_ERR(grf))
+			continue;
+
+		for (int i = 0; i < MAX_SUPPLIES; i++) {
+			struct udevice *reg;
+
+			if (!soc_data->supply_names[i] ||
+			    device_get_supply_regulator(dev, soc_data->supply_names[i], &reg) ||
+			    reg != supply)
+				continue;
+
+			ret = soc_data->write(grf, soc_data->grf_offset, i, uV);
+			if (ret)
+				return ret;
+		}
+	}
+
+	return ret;
+}
