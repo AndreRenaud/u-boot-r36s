@@ -43,6 +43,19 @@
 	regulator-init-microvolt = <5000000>;
 };
 
+/*
+ * After a PMIC reset these LDOs sit at 0.6 V. U-Boot only applies a fixed
+ * (min == max) voltage to boot-on/always-on regulators, while the panel and
+ * backlight drivers just switch them on, so mark them boot-on here.
+ */
+&vcc_bl {
+	regulator-boot-on;
+};
+
+&vcc_lcd {
+	regulator-boot-on;
+};
+
 &u2phy {
 	/*
 	 * Linux reparents USB480M to the PHY's clock output. The PX30 clock
@@ -68,6 +81,11 @@
 &uart2 {
 	bootph-all;
 	clock-frequency = <24000000>;
+};
+
+/* Bound before relocation so its framebuffer gets reserved */
+&vopb {
+	bootph-some-ram;
 };
 
 &uart2m1_xfer {
