@@ -134,6 +134,12 @@
 #define DW_MIPI_NEEDS_PHY_CFG_CLK	BIT(0)
 #define DW_MIPI_NEEDS_GRF_CLK		BIT(1)
 
+#define PX30_GRF_PD_VO_CON1		0x0438
+#define PX30_DSI_FORCETXSTOPMODE	(0xf << 7)
+#define PX30_DSI_FORCERXMODE		BIT(6)
+#define PX30_DSI_TURNDISABLE		BIT(5)
+#define PX30_DSI_LCDC_SEL		BIT(0)
+
 #define RK3399_GRF_SOC_CON20		0x6250
 #define RK3399_DSI0_LCDC_SEL		BIT(0)
 #define RK3399_DSI1_LCDC_SEL		BIT(4)
@@ -781,6 +787,10 @@ static int dw_mipi_dsi_rockchip_set_bl(struct udevice *dev, int percent)
 
 static void dw_mipi_dsi_rockchip_config(struct dw_rockchip_dsi_priv *dsi)
 {
+	/* Feed the DSI from the big VOP, the only one this driver set uses */
+	if (dsi->cdata->lcdsel_grf_reg)
+		rk_setreg(dsi->grf + dsi->cdata->lcdsel_grf_reg, dsi->cdata->lcdsel_big);
+
 	if (dsi->cdata->lanecfg1_grf_reg)
 		rk_setreg(dsi->grf + dsi->cdata->lanecfg1_grf_reg, dsi->cdata->lanecfg1);
 
@@ -911,6 +921,24 @@ struct video_bridge_ops dw_mipi_dsi_rockchip_ops = {
 	.set_backlight = dw_mipi_dsi_rockchip_set_bl,
 };
 
+static const struct rockchip_dw_dsi_chip_data px30_chip_data[] = {
+	{
+		.reg = 0xff450000,
+		.lcdsel_grf_reg = PX30_GRF_PD_VO_CON1,
+		.lcdsel_big = HIWORD_UPDATE(0, PX30_DSI_LCDC_SEL),
+		.lcdsel_lit = HIWORD_UPDATE(PX30_DSI_LCDC_SEL,
+					    PX30_DSI_LCDC_SEL),
+
+		.lanecfg1_grf_reg = PX30_GRF_PD_VO_CON1,
+		.lanecfg1 = HIWORD_UPDATE(0, PX30_DSI_TURNDISABLE |
+					     PX30_DSI_FORCERXMODE |
+					     PX30_DSI_FORCETXSTOPMODE),
+
+		.max_data_lanes = 4,
+	},
+	{ /* sentinel */ }
+};
+
 static const struct rockchip_dw_dsi_chip_data rk3399_chip_data[] = {
 	{
 		.reg = 0xff960000,
@@ -980,6 +1008,9 @@ static const struct rockchip_dw_dsi_chip_data rk3568_chip_data[] = {
 };
 
 static const struct udevice_id dw_mipi_dsi_rockchip_dt_ids[] = {
+	{ .compatible = "rockchip,px30-mipi-dsi",
+	  .data = (long)&px30_chip_data,
+	},
 	{ .compatible = "rockchip,rk3399-mipi-dsi",
 	  .data = (long)&rk3399_chip_data,
 	},
