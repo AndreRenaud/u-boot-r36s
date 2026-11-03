@@ -95,6 +95,7 @@ static int enable_sequence(struct udevice *dev, int seq)
 		if (priv->reg) {
 			__maybe_unused struct dm_regulator_uclass_plat
 				*plat;
+			bool was_on = regulator_get_enable(priv->reg) > 0;
 
 			plat = dev_get_uclass_plat(priv->reg);
 			log_debug("Enable '%s', regulator '%s'/'%s'\n",
@@ -105,12 +106,16 @@ static int enable_sequence(struct udevice *dev, int seq)
 					  dev->name);
 				return log_ret(ret);
 			}
-			mdelay(120);
+			/* Let the supply settle, unless it was already on */
+			if (!was_on)
+				mdelay(120);
 		}
 		break;
 	case 1:
-		mdelay(10);
-		dm_gpio_set_value(&priv->enable, 1);
+		if (dm_gpio_is_valid(&priv->enable)) {
+			mdelay(10);
+			dm_gpio_set_value(&priv->enable, 1);
+		}
 		break;
 	}
 
