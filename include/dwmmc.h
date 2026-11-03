@@ -143,6 +143,7 @@
 #define DWMCI_BMOD_IDMAC_EN	BIT(7)
 
 /* UHS register */
+#define DWMCI_UHS_18V		BIT(0)
 #define DWMCI_DDR_MODE		BIT(16)
 
 /* Internal IDMAC interrupt defines */

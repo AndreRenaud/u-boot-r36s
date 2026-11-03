@@ -648,6 +648,11 @@ static int dwmci_set_ios(struct mmc *mmc)
 	else
 		regs &= ~DWMCI_DDR_MODE;
 
+	if (mmc->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+		regs |= DWMCI_UHS_18V;
+	else
+		regs &= ~DWMCI_UHS_18V;
+
 	dwmci_writel(host, DWMCI_UHS_REG, regs);
 
 	if (host->clksel) {
