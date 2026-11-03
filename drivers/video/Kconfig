@@ -607,6 +607,16 @@ config VIDEO_LCD_LG_LH400WV3
 	  Say Y here if you want to enable support for LG LH400WV3
 	  480x800 DSI video mode panel.
 
+config VIDEO_LCD_NEWVISION_NV3051D
+	bool "NewVision NV3051D DSI LCD panel support"
+	depends on BACKLIGHT
+	select CYCLIC
+	select VIDEO_MIPI_DSI
+	help
+	  Say Y here if you want to enable support for NewVision NV3051D
+	  based 640x480 DSI video mode panels, such as the one in the
+	  R36S handheld.
+
 config VIDEO_LCD_RAYDIUM_RM68200
 	bool "RM68200 DSI LCD panel support"
 	depends on BACKLIGHT
