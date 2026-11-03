@@ -667,6 +667,27 @@ config ROCKCHIP_RK8XX_DISABLE_BOOT_ON_POWERON
 	  powered on, and if it was determined because of a plug-in event
 	  instead of a button press event it will shut back off.
 
+config ROCKCHIP_EARLY_DCACHE
+	bool "Enable the MMU and data cache before relocation"
+	depends on ARM64 && !SYS_DCACHE_OFF
+	help
+	  U-Boot proper normally runs with the MMU off until board_init_r(),
+	  and with the MMU off every data access (the stack, global data, the
+	  device tree) is uncached. Say Y to turn the MMU and caches on in
+	  arch_cpu_init() instead, with page tables at
+	  ROCKCHIP_EARLY_DCACHE_TLB_ADDR. board_init_r() then moves to the usual
+	  page tables. On the PX30 this makes U-Boot reach the kernel about
+	  0.4 s sooner. The SoC's arch_cpu_init() has to call
+	  rockchip_early_dcache_enable().
+
+config ROCKCHIP_EARLY_DCACHE_TLB_ADDR
+	hex "Address of the page tables used before relocation"
+	depends on ROCKCHIP_EARLY_DCACHE
+	default 0x01000000
+	help
+	  DRAM that nothing uses before board_init_r() has set up the usual
+	  page tables. It needs to hold PGTABLE_SIZE bytes.
+
 config ROCKCHIP_STIMER
 	bool "Rockchip STIMER support"
 	default y
