@@ -6,6 +6,10 @@
  * from late board init, as soon as the display can be brought up. The image
  * is built into U-Boot (r36s_splash.bmp, generated from splash.svg by
  * make-splash.sh) and drawn centred on the panel.
+ *
+ * The panel is probed as soon as driver model is up, so that its power-on
+ * reset (≈ 0.2 s, run in the background by its driver) overlaps loading the
+ * environment.
  */
 
 #include <clk.h>
@@ -16,6 +20,8 @@
 #include <mapmem.h>
 #include <splash.h>
 #include <video.h>
+#include <dm/device-internal.h>
+#include <dm/uclass-internal.h>
 #include <dt-bindings/clock/px30-cru.h>
 #include <linux/delay.h>
 #include <power/regulator.h>
@@ -62,6 +68,18 @@ static int r36s_raise_cpu_clock(void)
 	return 0;
 }
 EVENT_SPY_SIMPLE(EVT_DM_POST_INIT_R, r36s_raise_cpu_clock);
+
+/* Errors are reported when late init brings up the display */
+static int r36s_start_panel(void)
+{
+	struct udevice *dev;
+
+	if (IS_ENABLED(CONFIG_VIDEO))
+		uclass_first_device(UCLASS_PANEL, &dev);
+
+	return 0;
+}
+EVENT_SPY_SIMPLE(EVT_DM_POST_INIT_R, r36s_start_panel);
 #endif
 
 int rk_board_late_init(void)
@@ -72,9 +90,15 @@ int rk_board_late_init(void)
 	if (!IS_ENABLED(CONFIG_VIDEO))
 		return 0;
 
-	/* For testing Linux's panel bring-up without U-Boot touching it */
+	/*
+	 * For testing Linux's panel bring-up without U-Boot touching it. The
+	 * panel was powered up before the environment was loaded, so put it
+	 * back in reset.
+	 */
 	if (env_get_yesno("display_off") == 1) {
 		printf("display_off=1, not starting the display\n");
+		if (!uclass_find_first_device(UCLASS_PANEL, &dev) && dev)
+			device_remove(dev, DM_REMOVE_NORMAL);
 		return 0;
 	}
 
