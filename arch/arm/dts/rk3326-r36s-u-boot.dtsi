@@ -36,6 +36,14 @@
 };
 
 /*
+ * U-Boot can't tune, so SDR50/SDR104 are dropped by the driver; DDR50 (50 MHz,
+ * both clock edges) needs no tuning and doubles the High Speed rate.
+ */
+&sdmmc {
+	sd-uhs-ddr50;
+};
+
+/*
  * The boost comes up at 4.7 V, below USB VBUS spec. Linux raises it to the
  * regulator minimum (5.0 V); U-Boot only sets a voltage when told to.
  */
