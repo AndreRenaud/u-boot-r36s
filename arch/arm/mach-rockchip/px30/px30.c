@@ -18,6 +18,7 @@
 #include <asm/arch-rockchip/uart.h>
 #include <asm/arch-rockchip/clock.h>
 #include <asm/arch-rockchip/cru_px30.h>
+#include <asm/arch-rockchip/early_dcache.h>
 #include <dt-bindings/clock/px30-cru.h>
 #include <linux/bitfield.h>
 
@@ -248,6 +249,9 @@ int arch_cpu_init(void)
 	static struct px30_grf * const grf = (void *)GRF_BASE;
 	static struct px30_cru * const cru = (void *)CRU_BASE;
 	u32 __maybe_unused val;
+
+	/* U-Boot proper only: the rest of board_init_f() then runs cached */
+	rockchip_early_dcache_enable();
 
 #ifdef CONFIG_XPL_BUILD
 	/* We do some SoC one time setting here. */
