@@ -85,12 +85,18 @@ relocate_done:
 	b	0f
 1:	mrs	x0, sctlr_el1
 0:	tbz	w0, #2, 5f	/* skip flushing cache if disabled */
-	tbz	w0, #12, 4f	/* skip invalidating i-cache if disabled */
-	ic	iallu		/* i-cache invalidate all */
-	isb	sy
-4:	ldp	x0, x1, [sp, #16]
+	ldp	x0, x1, [sp, #16]
 	bl	__asm_flush_dcache_range
 	bl     __asm_flush_l3_dcache
-5:	ldp	x29, x30, [sp],#32
+5:	/*
+	 * Invalidate the i-cache even when it is disabled: a disabled i-cache
+	 * can still hit on some cores. On Cortex-A35, a U-Boot started from
+	 * another U-Boot (caches off, then "go") otherwise executes the
+	 * previous image's instructions at the addresses it relocated over.
+	 */
+	ic	iallu		/* i-cache invalidate all */
+	dsb	sy
+	isb	sy
+	ldp	x29, x30, [sp],#32
 	ret
 ENDPROC(relocate_code)
