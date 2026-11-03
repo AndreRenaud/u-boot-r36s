@@ -359,6 +359,8 @@ static void dwmci_wait_while_busy(struct dwmci_host *host, struct mmc_cmd *cmd)
 	}
 }
 
+static int dwmci_update_clken(struct dwmci_host *host, u32 val);
+
 static int dwmci_send_cmd_common(struct dwmci_host *host, struct mmc_cmd *cmd,
 				 struct mmc_data *data, void *cur_idmac)
 {
@@ -418,6 +420,14 @@ static int dwmci_send_cmd_common(struct dwmci_host *host, struct mmc_cmd *cmd,
 
 	if (cmd->resp_type & MMC_RSP_CRC)
 		flags |= DWMCI_CMD_CHECK_CRC;
+
+	/*
+	 * Stopping the clock is part of the voltage switch itself, so turn off
+	 * the automatic (low-power) clock stop first, as Linux does. It comes
+	 * back on with the next clock change after the switch.
+	 */
+	if (cmd->cmdidx == SD_CMD_SWITCH_UHS18V)
+		dwmci_update_clken(host, DWMCI_CLKEN_ENABLE);
 
 	host->volt_switching = (cmd->cmdidx == SD_CMD_SWITCH_UHS18V);
 	if (host->volt_switching)
@@ -511,9 +521,8 @@ static int dwmci_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	}
 }
 
-static int dwmci_control_clken(struct dwmci_host *host, bool on)
+static int dwmci_update_clken(struct dwmci_host *host, u32 val)
 {
-	const u32 val = on ? DWMCI_CLKEN_ENABLE | DWMCI_CLKEN_LOW_PWR : 0;
 	const u32 cmd_only_clk = DWMCI_CMD_PRV_DAT_WAIT | DWMCI_CMD_UPD_CLK;
 	int i, timeout = 10000;
 	u32 flags, mask;
@@ -535,6 +544,11 @@ static int dwmci_control_clken(struct dwmci_host *host, bool on)
 	}
 
 	return 0;
+}
+
+static int dwmci_control_clken(struct dwmci_host *host, bool on)
+{
+	return dwmci_update_clken(host, on ? DWMCI_CLKEN_ENABLE | DWMCI_CLKEN_LOW_PWR : 0);
 }
 
 /*
@@ -609,7 +623,11 @@ static int dwmci_set_ios(struct mmc *mmc)
 
 	debug("Bus width = %d, clock: %d\n", mmc->bus_width, mmc->clock);
 
-	dwmci_setup_bus(host, mmc->clock);
+	/* The clock is gated e.g. during a voltage switch, as the SD spec requires */
+	if (mmc->clk_disable)
+		dwmci_control_clken(host, false);
+	else
+		dwmci_setup_bus(host, mmc->clock);
 	switch (mmc->bus_width) {
 	case 8:
 		ctype = DWMCI_CTYPE_8BIT;
